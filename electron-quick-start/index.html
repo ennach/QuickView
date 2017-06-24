@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World!</title>
+  </head>
+  <body>
+    <h1>XXXX Standing QuickView</h1>
+
+    <SELECT id="chara">
+    </SELECT>
+    <SELECT id="bodies">
+    </SELECT>
+    <SELECT id="karada">
+    </SELECT>
+    <SELECT id="mayu">
+    </SELECT>
+    <SELECT id="eye">
+    </SELECT>
+    <SELECT id="mouth">
+    </SELECT>
+    <SELECT id="kouka">
+    </SELECT>
+    <br />
+    <div id="command"></div>
+    <br />
+
+    <div style="position:relative">
+      <img id="imgKarada" />
+      <img id="imgMayu" style="position:absolute;left:0px;top:0px;" />
+      <img id="imgEye" style="position:absolute;left:0px;top:0px;"  />
+      <img id="imgMouth" style="position:absolute;left:0px;top:0px;"  />
+      <img id="imgKouka" style="position:absolute;left:0px;top:0px;"  />
+   </div>
+  </body>
+
+  <script>
+    // You can also require other files to run in this process
+    require('./renderer.js')
+  </script>
+  <script>
+  var electron = require('electron');
+  var remote = electron.remote;
+  var fileUtil = remote.require('./fileUtil');
+
+  var path = fileUtil.Path;
+  console.log(path);
+
+
+  path = path.replace(/\\/, "/");
+  if(path[path.length -2, path.length -1] !== "/"){
+    path = path + "/";
+  }
+  var result = [];
+
+  fileUtil.fetchReadmeList(function(err, matches) {
+    result = matches;
+
+    var characters = [];
+    result.forEach(function(s){
+
+      s = s.replace(path, "");
+      var rep = s.replace(/data\/FG\/(.*?)\/(.*)$/, "$1");
+      if(characters.indexOf(rep) == -1) { characters.push(rep); }
+    });
+
+   var cmbChara = document.getElementById("chara");
+   for(i=0;i<characters.length;i++) {
+     cmbChara.options[i] = new Option(characters[i]);
+   }
+   cmbChara.options[0].selected = true;
+
+   var cmbBodies = document.getElementById("bodies");
+
+var cmbKarada = document.getElementById("karada");
+     var cmbMayu = document.getElementById("mayu");
+     var cmbEye = document.getElementById("eye");
+     var cmbMouth = document.getElementById("mouth");
+     var cmbKouka = document.getElementById("kouka");
+
+   function bindItems(cmbItem, bui) {
+       console.log("body change ");
+       cmbItem.options.length = 0;
+       var body = cmbBodies.options[cmbBodies.selectedIndex].text;
+
+       var prefix = body + "/" + bui +"/";
+       console.log("body change " + prefix);
+       var mayuItem = result.filter(function(s){ return s.indexOf("/" + prefix) >= 0; })
+                               .map(function(s){ return s.replace(new RegExp("(.*?)" + prefix + "(.*).png"), "$2"); });
+
+      var k = 0;
+      if (bui == "効果") {
+        k = 1;
+        cmbItem.options[0] = new Option("");
+      }
+       for(i=k;i<mayuItem.length + k;i++) {
+         cmbItem.options[i] = new Option(mayuItem[i - k]);
+       }
+
+       if(mayuItem.length != 0){
+         cmbItem.options[0].selected= true;
+       }
+   }
+
+   function setIMG() {
+     var getText = function(cmb) { return cmb.options[cmb.selectedIndex].text; }
+
+     var chara = getText(cmbChara);
+     var body = getText(cmbBodies);
+     var karada = getText(cmbKarada);
+     var mayu = getText(cmbMayu);
+     var eye = getText(cmbEye);
+     var mouth = getText(cmbMouth);
+     var kouka = getText(cmbKouka);
+
+     var comm = document.getElementById("command");
+     context = "@chara base=" + chara + "/" + body + " body=" + karada + " mayu=" + mayu + " eye=" + eye + " mouth=" + mouth;
+     if(typeof kouka !== 'undefined' && kouka !== '') {
+       context = context + " effect=" + kouka;
+     }
+     comm.textContent = context + " layer=1 pos=c";
+
+     var prefix = path + "data/FG/" + chara + "/" + body;
+     console.log(prefix +  "/体/" + karada + ".png");
+     document.getElementById("imgKarada").src = prefix +  "/体/" + karada + ".png";
+     document.getElementById("imgMayu").src = prefix +  "/眉/" + mayu + ".png";
+     document.getElementById("imgEye").src = prefix +  "/目/" + eye + ".png";
+     document.getElementById("imgMouth").src = prefix +  "/口/" + mouth + ".png";
+     if(typeof kouka !== 'undefined' && kouka !== '')  {
+       document.getElementById("imgKouka").src = prefix +  "/効果/" + kouka + ".png";
+     }
+     else {
+       document.getElementById("imgKouka").removeAttribute("src");
+     }
+
+
+   }
+
+   function bindBody() {
+     var chara = cmbChara.options[cmbChara.selectedIndex].text;
+
+      var prefix = path + "data/FG/" + chara + "/";
+      var bodyItem = [];
+     result
+      .filter(function(s){ return s.indexOf(prefix) >= 0; })
+      .forEach(function(s){
+        s = s.replace(prefix, "");
+
+        var rep = s.replace(/(.*?)\/(.*)$/, "$1");
+        if(bodyItem.indexOf(rep) == -1) { bodyItem.push(rep); }
+      });
+
+     for(i=0;i<bodyItem.length;i++) {
+       cmbBodies.options[i] = new Option(bodyItem[i]);
+     }
+      cmbBodies.options[0].selected= true;
+   }
+
+   cmbChara.onchange = function() {
+     cmbBodies.options.length = 0;
+
+     bindBody();
+      bindItems(cmbKarada, "体");
+      bindItems(cmbMayu, "眉");
+      bindItems(cmbEye, "目");
+      bindItems(cmbMouth, "口");
+      bindItems(cmbKouka, "効果");
+      setIMG();
+  }
+
+
+  cmbBodies.onchange = function() {
+    bindItems(cmbKarada, "体");
+    bindItems(cmbMayu, "眉");
+    bindItems(cmbEye, "目");
+    bindItems(cmbMouth, "口");
+    bindItems(cmbKouka, "効果");
+    setIMG();
+  }
+
+cmbKarada.onchange = setIMG;
+cmbMayu.onchange = setIMG;
+cmbEye.onchange = setIMG;
+cmbMouth.onchange = setIMG;
+cmbKouka.onchange = setIMG;
+
+bindBody();
+bindItems(cmbKarada, "体");
+bindItems(cmbMayu, "眉");
+bindItems(cmbEye, "目");
+bindItems(cmbMouth, "口");
+bindItems(cmbKouka, "効果");
+setIMG();
+
+
+  });
+  </script>
+</html>
